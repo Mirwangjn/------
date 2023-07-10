@@ -5,9 +5,51 @@ function Axios(instanceConfig){
         response:{}
     }
 };
+function dispatchRequest(config){
+    //这一步是用来对数据进行整理
+    return xrlAdepter(config).then((response) =>{
+        // console.log(response.Headers);
+        
+
+        return response
+    })
+};
+//由这个函数来发送请求
+function xrlAdepter(config){
+
+    return new Promise((resolve,reject) =>{
+        const xrl = new XMLHttpRequest();
+        xrl.open(config.method,config.url);
+        xrl.send();
+        xrl.onreadystatechange = function(){
+            if(xrl.readyState === 4){
+                if(xrl.status >= 200 && xrl.status < 300){
+                    resolve({
+                        //配置对象
+                        config,
+                        //响应体
+                        data:xrl.response,
+                        //所有的响应头
+                        Headers :xrl.getAllResponseHeaders(),
+                        // 内部生成的实例xrl对象
+                        request: xrl,
+                        status: xrl.status,
+                        statusText: xrl.statusText 
+                    })
+                } else{
+                    reject(new Error("请求失败"))
+                }
+            }
+        }
+    })
+}
 //通过request发送请求
 Axios.prototype.request = function(config){
-    console.log("request请求"+ config.method);
+    // console.log("request请求"+ config.method);
+    let promise = Promise.resolve(config);
+    let chains = [dispatchRequest,undefined];
+    let result = promise.then(chains[0],chains[1]);
+    return result
 };
 // get和post内部是调用了request请求
 Axios.prototype.get = function(config){
