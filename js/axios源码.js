@@ -29,7 +29,7 @@ InterceptorManager.prototype.use = function(fulfilled,rejected){
 }
 function dispatchRequest(config){
     //这一步是用来对数据进行整理
-    return xrlAdepter(config).then((response) =>{
+    return xhlAdepter(config).then((response) =>{
         // console.log(response.Headers);
         
 
@@ -37,32 +37,57 @@ function dispatchRequest(config){
     })
 };
 //由这个函数来发送请求
-function xrlAdepter(config){
+function xhlAdepter(config){
 
     return new Promise((resolve,reject) =>{
-        const xrl = new XMLHttpRequest();
-        xrl.open(config.method,config.url);
-        xrl.send();
-        xrl.onreadystatechange = function(){
-            if(xrl.readyState === 4){
-                if(xrl.status >= 200 && xrl.status < 300){
+        const xhl = new XMLHttpRequest();
+        xhl.open(config.method,config.url);
+        // xhl.setRequestHeader('content-type', 'application/x-www-form-urlencoded')
+        xhl.send();
+        xhl.onreadystatechange = function(){
+            if(xhl.readyState === 4){
+                if(xhl.status >= 200 && xhl.status < 300){
                     resolve({
                         //配置对象
                         config,
                         //响应体
-                        data:xrl.response,
+                        data:xhl.response,
                         //所有的响应头
-                        Headers :xrl.getAllResponseHeaders(),
-                        // 内部生成的实例xrl对象
-                        request: xrl,
-                        status: xrl.status,
-                        statusText: xrl.statusText 
+                        Headers :xhl.getAllResponseHeaders(),
+                        // 内部生成的实例xhl对象
+                        request: xhl,
+                        status: xhl.status,
+                        statusText: xhl.statusText 
                     })
                 } else{
                     reject(new Error("请求失败"))
                 }
             }
+        };
+        //取消请求条件
+        if(config.cancelToken){
+            config.cancelToken.promise.then(res =>{
+                xhl.abort()
+            })
         }
+    })
+};
+//取消请求功能,参数为一个函数
+/*
+    取消请求是通过判断config参数是否拥有cancelToken属性
+    再通过promise来判断是否取消请求
+*/ 
+function CancelToken(executor){
+    let resolvePromise;
+    
+    this.promise = new Promise((resolve,reject) =>{
+        //将改变状态的使用权给到resolvePromise
+        resolvePromise = resolve;
+    });
+    //如果函数调用，则promise的状态改变，然后取消请求
+    executor(function(){
+        // 将函数暴漏
+        resolvePromise();
     })
 }
 //通过request发送请求
@@ -92,11 +117,16 @@ Axios.prototype.request = function(config){
     return promise;
 };
 // get和post内部是调用了request请求
-Axios.prototype.get = function(config){
-    this.request({method:"get"})
+Axios.prototype.get = function(url,config){
+    config.method = "get";
+    config.url = url
+    const promise = this.request(config);
+    return promise;
 };
 Axios.prototype.post = function(config){
-    this.request({method:"post"})
+    config.url = url
+    const promise = this.request(config)
+    return promise;
 };
 // Axios.prototype.getUri = function(config){};
 // defaultConfig为一些基本的配置
