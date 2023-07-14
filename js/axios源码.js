@@ -30,20 +30,64 @@ InterceptorManager.prototype.use = function(fulfilled,rejected){
 function dispatchRequest(config){
     //这一步是用来对数据进行整理
     return xhlAdepter(config).then((response) =>{
-        // console.log(response.Headers);
-        
+        // console.log(response.headers);
+        // let result = response.Headers.replace(/\r\n/g, "").replace(/ /g, "");
+        //处理请求头信息
+        let result = response.headers.split("\r\n");
+        result.pop();
+        let obj = {};
+        result.forEach((ele) =>{
+           let newArr =  ele.split(":");
+           obj[newArr[0]] = newArr[1].replace(" ","");
+        });
+        response.headers = obj;
+        try {
+            response.data = JSON.parse(response.data)
+        } catch (error) {
 
+        }
+        //处理头信息 end
+        // console.log(response.data);
+        // console.log(obj);
+        // console.log(result);
         return response
     })
 };
 //由这个函数来发送请求
 function xhlAdepter(config){
-
     return new Promise((resolve,reject) =>{
+         //遍历请求头
+        function handleHeader(headers){
+            //首先判断是否配置对象config中有headers属性
+            if(headers){
+                for (let key in headers) {
+                    // console.log(key,headers[key]);
+                    xhl.setRequestHeader(key,headers[key])
+                }
+            }
+        };
+        function handleParams(params){
+            let str = "";
+            let num = 1;
+            for (let key in params) {
+                if(num === 1){
+                    str += `${key}=${params[key]}`;
+                    num++;
+                } else{
+                    str += `&${key}=${params[key]}`;
+                }
+            };
+            // console.log(str);
+
+            return str;
+        }
         const xhl = new XMLHttpRequest();
         xhl.open(config.method,config.url);
-        // xhl.setRequestHeader('content-type', 'application/x-www-form-urlencoded')
-        xhl.send();
+        handleHeader(config.headers);
+        xhl.setRequestHeader('content-type', 'application/x-www-form-urlencoded')
+        // xhl.setRequestHeader("a","11")
+        
+        xhl.send(handleParams(config.params)); 
         xhl.onreadystatechange = function(){
             if(xhl.readyState === 4){
                 if(xhl.status >= 200 && xhl.status < 300){
@@ -53,7 +97,7 @@ function xhlAdepter(config){
                         //响应体
                         data:xhl.response,
                         //所有的响应头
-                        Headers :xhl.getAllResponseHeaders(),
+                        headers :xhl.getAllResponseHeaders(),
                         // 内部生成的实例xhl对象
                         request: xhl,
                         status: xhl.status,
@@ -123,7 +167,8 @@ Axios.prototype.get = function(url,config){
     const promise = this.request(config);
     return promise;
 };
-Axios.prototype.post = function(config){
+Axios.prototype.post = function(url,config){
+    config.method = "post";
     config.url = url
     const promise = this.request(config)
     return promise;
@@ -153,3 +198,4 @@ function createInstance(defaultConfig){
 //赋值
 const axios = createInstance({method:"get"});//传入值为axios默认的配置对象
 // axios.request({method:"post"})
+ 
