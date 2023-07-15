@@ -1,4 +1,4 @@
-function Axios(instanceConfig){
+function Axios(instanceConfig) {
     this.default = instanceConfig;
     /*
         拦截器内部实现原理为：将拦截器的函数存储起来，然后遍历添加到chains数组上
@@ -10,35 +10,35 @@ function Axios(instanceConfig){
         这是undefined有着极大的作用。如果请求的promise状态为rejected，在执行到undefined时
         promise会异常穿透(你不写内部帮你生成)
     */
-     
+
     this.interceptors = {
-        request:new InterceptorManager(),
-        response:new InterceptorManager()
+        request: new InterceptorManager(),
+        response: new InterceptorManager()
     }
 };
 //实现拦截器
-function InterceptorManager(){
+function InterceptorManager() {
     this.handlers = [];
 }
-InterceptorManager.prototype.use = function(fulfilled,rejected){
+InterceptorManager.prototype.use = function (fulfilled, rejected) {
     //use的作用是将参数添加到handlers身上，然后遍历添加到chain中，然后在遍历运行chain
     this.handlers.push({
         fulfilled,
         rejected
     })
 }
-function dispatchRequest(config){
+function dispatchRequest(config) {
     //这一步是用来对数据进行整理
-    return xhlAdepter(config).then((response) =>{
+    return xhlAdepter(config).then((response) => {
         // console.log(response.headers);
         // let result = response.Headers.replace(/\r\n/g, "").replace(/ /g, "");
         //处理请求头信息
         let result = response.headers.split("\r\n");
         result.pop();
         let obj = {};
-        result.forEach((ele) =>{
-           let newArr =  ele.split(":");
-           obj[newArr[0]] = newArr[1].replace(" ","");
+        result.forEach((ele) => {
+            let newArr = ele.split(":");
+            obj[newArr[0]] = newArr[1].replace(" ", "");
         });
         response.headers = obj;
         try {
@@ -54,15 +54,16 @@ function dispatchRequest(config){
     })
 };
 //由这个函数来发送请求
-function xhlAdepter(config){
-    return new Promise((resolve,reject) =>{
-         //遍历请求头
-        function handleHeader(headers){
+function xhlAdepter(config) {
+    return new Promise((resolve, reject) => {
+        //遍历请求头
+        function handleHeader(headers) {
             //首先判断是否配置对象config中有headers属性
-            if(headers){
+            if (headers) {
                 for (let key in headers) {
                     // console.log(key,headers[key]);
-                    xhl.setRequestHeader(key,headers[key])
+                    //配置对象的头参数必须是string类型 
+                    xhl.setRequestHeader(key, headers[key]);
                 }
             }
         };
@@ -70,19 +71,26 @@ function xhlAdepter(config){
          *   //将params此参数转化为字符串添加到send中，
          * 以id=1&wa=9的形式
          */
-        function handleData(data){
+        function handleData(data) {
             let str = "";
             let num = 1;
-            for (let key in data) {
-                if(num === 1){
-                    str += `${key}=${data[key]}`;
-                    num++;
-                } else{
-                    str += `&${key}=${data[key]}`;
-                }
+            //所以的东西都继承了Object类所以如果data为数组的话也会进这里面
+            if (data instanceof Object) {
+                //是对象则执行里面
+                for (let key in data) {
+                    if (num === 1) {
+                        str += `${key}=${data[key]}`;
+                        num++;
+                    } else {
+                        str += `&${key}=${data[key]}`;
+                    }
+                };
             };
+            //如果是字符串则直接赋值
+            if (typeof data === "string") {
+                str = data;
+            }
             // console.log(str);
-
             return str;
         }
         const xhl = new XMLHttpRequest();
@@ -91,39 +99,45 @@ function xhlAdepter(config){
         //如果直接就是没有参数就会有 ？
         // xhl.open(config.method,`${config.url}?${handleData(config.params)}`);
         //如果params
-        if(!handleData(config.params)){
-            xhl.open(config.method,config.url);
-        } else{
-            xhl.open(config.method,`${config.url}?${handleData(config.params)}`);
+        if (!handleData(config.params)) {
+            xhl.open(config.method, config.url);
+        } else {
+            xhl.open(config.method, `${config.url}?${handleData(config.params)}`);
         }
         handleHeader(config.headers);
         xhl.setRequestHeader('content-type', 'application/x-www-form-urlencoded');
         // xhl.setRequestHeader('content-type', 'application/json');
         // xhl.setRequestHeader("a","11")
-        xhl.send(handleData(config.data)); 
-        xhl.onreadystatechange = function(){
-            if(xhl.readyState === 4){
-                if(xhl.status >= 200 && xhl.status < 300){
+        //设置超时取消请求
+        xhl.timeout = config.timeout;
+        xhl.ontimeout = function () {
+            console.error("请求超时了!!小牛🐎");
+        };//超时结束
+        xhl.send(handleData(config.data));
+        xhl.onreadystatechange = function () {
+            if (xhl.readyState === 4) {
+                if (xhl.status >= 200 && xhl.status < 300) {
                     resolve({
                         //配置对象
                         config,
                         //响应体
-                        data:xhl.response,
+                        data: xhl.response,
                         //所有的响应头
-                        headers :xhl.getAllResponseHeaders(),
+                        headers: xhl.getAllResponseHeaders(),
                         // 内部生成的实例xhl对象
                         request: xhl,
                         status: xhl.status,
-                        statusText: xhl.statusText 
+                        statusText: xhl.statusText
                     })
-                } else{
-                    reject(new Error("请求失败"))
+                } else {
+                    reject(new Error("请求失败或超时请求"));
+
                 }
             }
         };
         //取消请求条件
-        if(config.cancelToken){
-            config.cancelToken.promise.then(res =>{
+        if (config.cancelToken) {
+            config.cancelToken.promise.then(res => {
                 xhl.abort()
             })
         }
@@ -133,16 +147,16 @@ function xhlAdepter(config){
 /*
     取消请求是通过判断config参数是否拥有cancelToken属性
     再通过promise来判断是否取消请求
-*/ 
-function CancelToken(executor){
+*/
+function CancelToken(executor) {
     let resolvePromise;
-    
-    this.promise = new Promise((resolve,reject) =>{
+
+    this.promise = new Promise((resolve, reject) => {
         //将改变状态的使用权给到resolvePromise
         resolvePromise = resolve;
     });
     //如果函数调用，则promise的状态改变，然后取消请求
-    executor(function(){
+    executor(function () {
         // 将函数暴漏
         resolvePromise();
     })
@@ -153,52 +167,52 @@ const defaults = {
     timeout: 0,
 };
 //通过request发送请求
-Axios.prototype.request = function(configUrl,config){
+Axios.prototype.request = function (configUrl, config) {
     //axios在支持只写网址的
-    if(typeof configUrl === "string"){
+    if (typeof configUrl === "string") {
         //如果没写则为空对象
         config = config || {};
         config.url = configUrl;
-    } else{
+    } else {
         //不是string，而是对象之类的话
         config = configUrl || {};
     };
     //判断是否有些请i求
     config.method = config.method || "get";
     //合并默认配置对象和用户所传递的参数
-    const merge = {...defaults,...config};
+    const merge = { ...defaults, ...config };
     // console.log(merge);
     //传入的参数在先，修改在后
     let promise = Promise.resolve(merge);
-    
-    let chains = [dispatchRequest,undefined];
+
+    let chains = [dispatchRequest, undefined];
     //添加请求拦截器函数
-    this.interceptors.request.handlers.forEach(manyFn =>{
-       chains.unshift(manyFn.fulfilled,manyFn.rejected);
+    this.interceptors.request.handlers.forEach(manyFn => {
+        chains.unshift(manyFn.fulfilled, manyFn.rejected);
     });
     //添加响应拦截器函数
-    this.interceptors.response.handlers.forEach(manyFn =>{
-        chains.push(manyFn.fulfilled,manyFn.rejected);
+    this.interceptors.response.handlers.forEach(manyFn => {
+        chains.push(manyFn.fulfilled, manyFn.rejected);
     })
     // console.log(chains);
     // 拦截器函数添加完成，进行遍历
     let i = 0;
-    while(chains.length > i){
+    while (chains.length > i) {
         // promise.then(chains.shift(),chains.shift());//老源码写法
-        promise = promise.then(chains[i++],chains[i++]);//新源码写法
+        promise = promise.then(chains[i++], chains[i++]);//新源码写法
     }
 
     // let result = promise.then(chains[0],chains[1]);
     return promise;
 };
 // get和post内部是调用了request请求
-Axios.prototype.get = function(url,config){
+Axios.prototype.get = function (url, config) {
     config.method = "get";
     config.url = url
     const promise = this.request(config);
     return promise;
 };
-Axios.prototype.post = function(url,config){
+Axios.prototype.post = function (url, config) {
     config.method = "post";
     config.url = url
     const promise = this.request(config)
@@ -206,7 +220,7 @@ Axios.prototype.post = function(url,config){
 };
 // Axios.prototype.getUri = function(config){};
 // defaultConfig为一些基本的配置
-function createInstance(defaultConfig){
+function createInstance(defaultConfig) {
     const context = new Axios(defaultConfig);
     //让Axios.prototype.request的this指向实例对象context（保险）
     const instance = Axios.prototype.request.bind(context);
@@ -216,11 +230,11 @@ function createInstance(defaultConfig){
         //相当于添加静态方法
         4.这一步只是把原型上的方法挂载到instance身上
     */
-    Object.keys(Axios.prototype).forEach(key =>{
+    Object.keys(Axios.prototype).forEach(key => {
         instance[key] = Axios.prototype[key].bind(context);
     });
     //获得实例的属性，方法是挂载到原型身上的，所以不会拿到
-    Object.keys(context).forEach(key =>{
+    Object.keys(context).forEach(key => {
         instance[key] = context[key]
     })
     // console.dir(instance);
@@ -229,4 +243,3 @@ function createInstance(defaultConfig){
 //赋值
 const axios = createInstance(defaults);//传入值为axios默认的配置对象
 // axios.request({method:"post"})
- 
