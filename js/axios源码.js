@@ -66,15 +66,19 @@ function xhlAdepter(config){
                 }
             }
         };
-        function handleParams(params){
+        /**
+         *   //将params此参数转化为字符串添加到send中，
+         * 以id=1&wa=9的形式
+         */
+        function handleData(data){
             let str = "";
             let num = 1;
-            for (let key in params) {
+            for (let key in data) {
                 if(num === 1){
-                    str += `${key}=${params[key]}`;
+                    str += `${key}=${data[key]}`;
                     num++;
                 } else{
-                    str += `&${key}=${params[key]}`;
+                    str += `&${key}=${data[key]}`;
                 }
             };
             // console.log(str);
@@ -82,12 +86,21 @@ function xhlAdepter(config){
             return str;
         }
         const xhl = new XMLHttpRequest();
-        xhl.open(config.method,config.url);
+        // xhl.open(config.method,config.url);
+        // console.log(`${config.url}?${handleData(config.params)}`);
+        //如果直接就是没有参数就会有 ？
+        // xhl.open(config.method,`${config.url}?${handleData(config.params)}`);
+        //如果params
+        if(!handleData(config.params)){
+            xhl.open(config.method,config.url);
+        } else{
+            xhl.open(config.method,`${config.url}?${handleData(config.params)}`);
+        }
         handleHeader(config.headers);
-        xhl.setRequestHeader('content-type', 'application/x-www-form-urlencoded')
+        xhl.setRequestHeader('content-type', 'application/x-www-form-urlencoded');
+        // xhl.setRequestHeader('content-type', 'application/json');
         // xhl.setRequestHeader("a","11")
-        
-        xhl.send(handleParams(config.params)); 
+        xhl.send(handleData(config.data)); 
         xhl.onreadystatechange = function(){
             if(xhl.readyState === 4){
                 if(xhl.status >= 200 && xhl.status < 300){
@@ -133,12 +146,30 @@ function CancelToken(executor){
         // 将函数暴漏
         resolvePromise();
     })
-}
+};
+//创建默认配置对象
+const defaults = {
+    adapter: ['xhr'],
+    timeout: 0,
+};
 //通过request发送请求
-Axios.prototype.request = function(config){
-    // console.log("request请求"+ config.method);
+Axios.prototype.request = function(configUrl,config){
+    //axios在支持只写网址的
+    if(typeof configUrl === "string"){
+        //如果没写则为空对象
+        config = config || {};
+        config.url = configUrl;
+    } else{
+        //不是string，而是对象之类的话
+        config = configUrl || {};
+    };
+    //判断是否有些请i求
+    config.method = config.method || "get";
+    //合并默认配置对象和用户所传递的参数
+    const merge = {...defaults,...config};
+    // console.log(merge);
     //传入的参数在先，修改在后
-    let promise = Promise.resolve(config);
+    let promise = Promise.resolve(merge);
     
     let chains = [dispatchRequest,undefined];
     //添加请求拦截器函数
@@ -196,6 +227,6 @@ function createInstance(defaultConfig){
     return instance;
 };
 //赋值
-const axios = createInstance({method:"get"});//传入值为axios默认的配置对象
+const axios = createInstance(defaults);//传入值为axios默认的配置对象
 // axios.request({method:"post"})
  
