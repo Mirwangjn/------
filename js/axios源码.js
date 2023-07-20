@@ -1,3 +1,4 @@
+
 function Axios(instanceConfig) {
     this.default = instanceConfig;
     /*
@@ -47,10 +48,14 @@ function dispatchRequest(config) {
 
         }
         //处理头信息 end
+        //如果设置了responseType且属性值为json则帮其转换
+        if(response.responseType && response.responseType === "json"){
+            response.data = JSON.parse(response.data);
+        }
         // console.log(response.data);
         // console.log(obj);
         // console.log(result);
-        return response
+        return response;
     })
 };
 //由这个函数来发送请求
@@ -74,8 +79,15 @@ function xhlAdepter(config) {
         function handleData(data) {
             let str = "";
             let num = 1;
+            //判断参数是否URLSearchParams
+            if(data instanceof URLSearchParams){
+                // console.log(22);
+                str = data.toString();
+                config.data = str
+            } else
             //所以的东西都继承了Object类所以如果data为数组的话也会进这里面
             if (data instanceof Object) {
+                // console.log(11);
                 //是对象则执行里面
                 for (let key in data) {
                     if (num === 1) {
@@ -85,11 +97,13 @@ function xhlAdepter(config) {
                         str += `&${key}=${data[key]}`;
                     }
                 };
-            };
+            } else
             //如果是字符串则直接赋值
             if (typeof data === "string") {
+                // console.log(0);         
                 str = data;
-            }
+            };
+            
             // console.log(str);
             return str;
         }
@@ -104,8 +118,8 @@ function xhlAdepter(config) {
         } else {
             xhl.open(config.method, `${config.url}?${handleData(config.params)}`);
         }
-        handleHeader(config.headers);
-        xhl.setRequestHeader('content-type', 'application/x-www-form-urlencoded');
+        handleHeader(config.headers);//此方法用来遍历请求头
+        // xhl.setRequestHeader('content-type', 'application/x-www-form-urlencoded');
         // xhl.setRequestHeader('content-type', 'application/json');
         // xhl.setRequestHeader("a","11")
         //设置超时取消请求
@@ -165,6 +179,10 @@ function CancelToken(executor) {
 const defaults = {
     adapter: ['xhr'],
     timeout: 0,
+    headers:{
+        'Accept': 'application/json, text/plain, */*',
+        'content-type': 'application/x-www-form-urlencoded',
+    }
 };
 //通过request发送请求
 Axios.prototype.request = function (configUrl, config) {
@@ -179,8 +197,19 @@ Axios.prototype.request = function (configUrl, config) {
     };
     //判断是否有些请i求
     config.method = config.method || "get";
-    //合并默认配置对象和用户所传递的参数
-    const merge = { ...defaults, ...config };
+    //合并默认配置对象和用户所传递的参数，但缺陷是我的配置如果是空对象会直接覆盖我的默认配置对象
+    // const merge = { ...defaults, ...config };
+    function configMerge(defaultConfig,config){
+        let changeHeaders;
+        Object.keys(config.headers).forEach((eleConfig,index) =>{
+            // headers请求头不可以覆盖，其他可以
+            defaultConfig.headers[eleConfig] = config.headers[eleConfig];
+        });
+        changeHeaders = defaultConfig.headers
+        // console.log(changeHeaders);
+        return { ...defaults, ...config,headers : changeHeaders }
+    };
+   const merge =  configMerge(defaults,config);
     // console.log(merge);
     //传入的参数在先，修改在后
     let promise = Promise.resolve(merge);
