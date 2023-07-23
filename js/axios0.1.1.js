@@ -131,10 +131,10 @@ function xhlAdepter(config) {
                             for (let key in changeData) {
                             if (Object.hasOwnProperty.call(changeData, key)) {
                                 if (num === 1) {
-                                    str += `${key} = ${changeData[key]}`;
+                                    str += `${key}=${changeData[key]}`;
                                     num++;
                                 } else {
-                                    str += `& ${key} = ${changeData[key]}`;
+                                    str += `&${key}=${changeData[key]}`;
                                 }
                             }
 
