@@ -63,10 +63,12 @@ function dispatchRequest(config) {
                 }
             },
         };
-            //如果设置了responseType且属性值为json则帮其转换
-            // if (response.responseType && response.responseType === "json") {
+        //如果设置了responseType且属性值为json则帮其转换
+        // if (response.responseType && response.responseType === "json") {
 
-            // }
+        // }
+        //防止他人瞎乱改，把responseType设置为空字符串
+        config.responseType = config.responseType || "json"
             //当以数组形式直接调用函数时，需注意上面地分号
             ;["text", "json"].forEach(key => {
                 if (config.responseType === key) {
@@ -89,7 +91,9 @@ function xhlAdepter(config) {
             if (headers) {
                 for (let key in headers) {
                     if (Object.hasOwnProperty.call(headers, key)) {
-                        // console.log(key,headers[key]);
+                        // if(key === "content-type" && typeof config.data === "string")
+                        // typeof config.data === "string" ? headers["content-type"] 
+                        // = 'application/x-www-form-urlencoded' : headers["content-type"] = "application/json";
                         //配置对象的头参数必须都是string类型 
                         xhl.setRequestHeader(key, headers[key]);
                     }
@@ -101,39 +105,44 @@ function xhlAdepter(config) {
          *   //将params此参数转化为字符串添加到send中，
          * 以id=1&wa=9的形式
          */
-        function handleData(data) {
+        function handleData(changeData,changeSendType) {
             let str = "";
             let num = 1;
             //判断参数是否URLSearchParams
-            if (data instanceof URLSearchParams) {
-                // console.log(22);
-                str = data.toString();
+            if (changeData instanceof URLSearchParams) {
+                config.data = str = data.toString();
+                // str = data.toString();
                 //这一步为了让config的显示
-                config.data = str
+                // config.data = str
             } else
                 //所以的东西都继承了Object类所以如果data为数组的话也会进这里面
-                if (data instanceof Object) {
-                    // console.log(11);
-                    //是对象则执行里面
-                    for (let key in data) {
-                        if (Object.hasOwnProperty.call(data, key)) {
-                            if (num === 1) {
-                                str += `${key}=${data[key]}`;
-                                num++;
-                            } else {
-                                str += `&${key}=${data[key]}`;
+                if (changeData instanceof Object) {
+                    /*
+                        是对象则执行里面.但是需要注意下列是将对象手动转化为键值对的字符串
+                        但是这样就只能发送urlencoded的content-type,接下来改进
+                    */ 
+                   if(changeSendType) {
+                        // str = JSON.stringify()
+                            for (let key in changeData) {
+                            if (Object.hasOwnProperty.call(changeData, key)) {
+                                if (num === 1) {
+                                    str += `${key}=${changeData[key]}`;
+                                    num++;
+                                } else {
+                                    str += `&${key}=${changeData[key]}`;
+                                }
                             }
-                        }
 
-                    };
+                        };
+                   } else{ str = JSON.stringify(config.data)};
+                    
+                   //end
                 } else
                     //如果是字符串则直接赋值
-                    if (typeof data === "string") {
-                        // console.log(0);         
-                        str = data;
+                    if (typeof changeData === "string") {
+                        str = changeData;
                     };
-
-            // console.log(str);
+                    // if(typeof data === "string") str = data;
             return str;
         }
         const xhl = new XMLHttpRequest();
@@ -141,13 +150,12 @@ function xhlAdepter(config) {
         // console.log(`${config.url}?${handleData(config.params)}`);
         //如果直接就是没有参数就会有 ？
         // xhl.open(config.method,`${config.url}?${handleData(config.params)}`);
-        //如果params
-        if (!handleData(config.params)) {
-            //如果参数为空字符串进这里
+        if (!handleData(config.params,false)) {
+            //如果参数为空字符串,空对象，或者没写 和 undefined进这里
             xhl.open(config.method, config.baseUrl + config.url);//字符串拼凑
         } else {
             // 有参数进这里
-            xhl.open(config.method, `${config.baseUrl}${config.url}?${handleData(config.params)}`);
+            xhl.open(config.method, `${config.baseUrl}${config.url}?${handleData(config.params,false)}`);
         }
         handleHeader(config.headers);//此方法用来遍历请求头
         // xhl.setRequestHeader('content-type', 'application/x-www-form-urlencoded');
@@ -158,7 +166,7 @@ function xhlAdepter(config) {
         xhl.ontimeout = function () {
             console.error("请求超时了!!小牛🐎");
         };//超时结束
-        xhl.send(handleData(config.data));
+        xhl.send(handleData(config.data,config.changeSendType));
         xhl.onreadystatechange = function () {
             if (xhl.readyState === 4) {
                 if (xhl.status >= 200 && xhl.status < 300) {
@@ -221,6 +229,7 @@ const defaults = {
         // 'content-type':"application/json"
     },
     responseType: "json",
+    changeSendType:false,
 };
 //通过request发送请求
 Axios.prototype.request = function (configUrl, config) {
@@ -291,7 +300,7 @@ Axios.prototype.post = function (url, config) {
     return promise;
 };
 // 获取完整的url
-Axios.prototype.getUri = function(config){
+Axios.prototype.getUri = function (config) {
     const url = config.baseUrl || this.default.baseUrl;
     return url + config.url;
 }
@@ -320,3 +329,25 @@ function createInstance(defaultConfig) {
 //赋值
 const axios = createInstance(defaults);//传入值为axios默认的配置对象
 // axios.request({method:"post"})
+//返回值为一个新的配置对象
+axios.create = function (config) {
+    const createConfig = configMerge(defaults, config);
+    // console.log(createConfig);
+    return createInstance(createConfig)
+}
+//合并配置对象但是头信息只是添加到defaultConfig中
+function configMerge(defaultConfig, config) {
+    let changeHeaders;
+    //Object.keys获取null和undefined会报错
+    // Object.keys(config.headers).forEach((eleConfig,index) =>{
+    //     // headers请求头不可以覆盖，其他可以
+    //     defaultConfig.headers[eleConfig] = config.headers[eleConfig];
+    // });
+    // forin在获取null和undefined不会报错
+    for (const key in config.headers) {
+        defaultConfig.headers[key] = config.headers[key];
+    };
+    changeHeaders = defaultConfig.headers;
+    // console.log(changeHeaders);
+    return { ...defaultConfig, ...config, headers: changeHeaders }
+};
