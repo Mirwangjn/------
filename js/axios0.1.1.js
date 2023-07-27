@@ -131,10 +131,10 @@ function xhlAdepter(config) {
                             for (let key in changeData) {
                             if (Object.hasOwnProperty.call(changeData, key)) {
                                 if (num === 1) {
-                                    str += `${key} = ${changeData[key]}`;
+                                    str += `${key}=${changeData[key]}`;
                                     num++;
                                 } else {
-                                    str += `& ${key} = ${changeData[key]}`;
+                                    str += `&${key}=${changeData[key]}`;
                                 }
                             }
 
@@ -160,7 +160,7 @@ function xhlAdepter(config) {
             xhl.open(config.method, config.baseUrl + config.url);//字符串拼凑
         } else {
             // 有参数进这里
-            xhl.open(config.method, `${config.baseUrl} ${config.url} ? ${handleData(config.params,false)} `);
+            xhl.open(config.method, `${config.baseUrl}${config.url}?${handleData(config.params,false)}`);
         };
         handleHeader(config.headers);//此方法用来遍历请求头
         // xhl.setRequestHeader('content-type', 'application/x-www-form-urlencoded');

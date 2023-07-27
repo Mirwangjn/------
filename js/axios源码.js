@@ -215,7 +215,7 @@ function xhlAdepter(config) {
         xhl.ontimeout = function () {
             console.error("请求超时了!!小牛🐎");
         };//超时结束
-        xhl.send(handleData(config.data) || null);
+         xhl.send(handleData(config.data) || null);
         xhl.onreadystatechange = function () {
             if (xhl.readyState === 4) {
                 if (xhl.status >= 200 && xhl.status < 300) {
