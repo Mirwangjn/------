@@ -1,6 +1,6 @@
 
 function Axios(instanceConfig) {
-    this.default = instanceConfig;
+    this.defaults = instanceConfig;
     /*
         拦截器内部实现原理为：将拦截器的函数存储起来，然后遍历添加到chains数组上
         请求拦截器使用unshift()添加到chains数组前面;而响应拦截器使用push添加到后面
@@ -89,28 +89,54 @@ function xhlAdepter(config) {
         function handleHeader(headers) {
             //首先判断是否配置对象config中有headers属性
             if (headers) {
+                //判断发送的config.data类型来配置content-type的请求头是application/json还是application/x-www-form-urlencoded
+                if(config.data instanceof URLSearchParams || typeof config.data === "string") {
+                    headers["content-type"] = "application/x-www-form-urlencoded";
+                } else if(config.data instanceof Object) {
+                    headers["content-type"] = "application/json";
+                };
+                // config.data instanceof URLSearchParams || typeof config.data === "string" ? 
+                // headers["content-type"] = "application/x-www-form-urlencoded" : config.data instanceof Object ? headers["content-type"] = "application/json" : "";
+                //通过changeSendType配置项改变对象的请求头
+                if(config.changeSendType) {
+                    headers["content-type"] = "application/x-www-form-urlencoded;charset=UTF-8";
+                }
                 for (let key in headers) {
                     if (Object.hasOwnProperty.call(headers, key)) {
-                        // if(key === "content-type" && typeof config.data === "string")
-                        // typeof config.data === "string" ? headers["content-type"] 
-                        // = 'application/x-www-form-urlencoded' : headers["content-type"] = "application/json";
+                                xhl.setRequestHeader(key, headers[key]);
+                        }
                         //配置对象的头参数必须都是string类型 
-                        xhl.setRequestHeader(key, headers[key]);
                     }
 
                 }
-            }
+            
+        };
+        //用来把对象改变为符合键值对的样子 {id:1,password:8} => id=1&password=8(返回值)
+        function handleObject (changeString){
+            let num = 1;
+            let str = "";
+            for (let key in changeString) {
+                if (Object.hasOwnProperty.call(changeString, key)) {
+                    if (num === 1) {
+                        str += `${key}=${changeString[key]}`;
+                        num++;
+                    } else {
+                        str += `&${key}=${changeString[key]}`;
+                    }
+                }
+            };
+            return str;
         };
         /**
          *   //将params此参数转化为字符串添加到send中，
          * 以id=1&wa=9的形式
          */
-        function handleData(changeData,changeSendType) {
+        function handleData(changeData) {
             let str = "";
-            let num = 1;
+            // let num = 1;
             //判断参数是否URLSearchParams
             if (changeData instanceof URLSearchParams) {
-                config.data = str = data.toString();
+                config.data = str = changeData.toString();
                 // str = data.toString();
                 //这一步为了让config的显示
                 // config.data = str
@@ -121,20 +147,21 @@ function xhlAdepter(config) {
                         是对象则执行里面.但是需要注意下列是将对象手动转化为键值对的字符串
                         但是这样就只能发送urlencoded的content-type,接下来改进
                     */ 
-                   if(changeSendType) {
-                        // str = JSON.stringify()
-                            for (let key in changeData) {
-                            if (Object.hasOwnProperty.call(changeData, key)) {
-                                if (num === 1) {
-                                    str += `${key}=${changeData[key]}`;
-                                    num++;
-                                } else {
-                                    str += `&${key}=${changeData[key]}`;
-                                }
-                            }
-
-                        };
-                   } else{ str = JSON.stringify(config.data)};
+                   if (config.changeSendType) {
+                    // for (let key in changeData) {
+                    //     if (Object.hasOwnProperty.call(changeData, key)) {
+                    //         if (num === 1) {
+                    //             str += `${key}=${changeData[key]}`;
+                    //             num++;
+                    //         } else {
+                    //             str += `&${key}=${changeData[key]}`;
+                    //         }
+                    //     }
+                    // };
+                    str = handleObject(changeData)
+                   } else{
+                        str = JSON.stringify(config.data);
+                   }
                     
                    //end
                 } else
@@ -144,19 +171,41 @@ function xhlAdepter(config) {
                     };
                     // if(typeof data === "string") str = data;
             return str;
+        };
+        //将data于params拆分
+        function handleParams(changeParams){
+            let str = "";
+            // let num = 1;
+            if(changeParams instanceof Object) {
+                //     for (let key in changeParams) {
+                //     if (Object.hasOwnProperty.call(changeParams, key)) {
+                //         if (num === 1) {
+                //             str += `${key}=${changeParams[key]}`;
+                //             num++;
+                //         } else {
+                //             str += `&${key}=${changeParams[key]}`;
+                //         }
+                //     }
+                // };
+                str = handleObject(changeParams);
+            } else if(typeof changeParams === "string") {
+                str = changeParams;
+            };
+            
+            return str;
         }
         const xhl = new XMLHttpRequest();
         // xhl.open(config.method,config.url);
         // console.log(`${config.url}?${handleData(config.params)}`);
         //如果直接就是没有参数就会有 ？
         // xhl.open(config.method,`${config.url}?${handleData(config.params)}`);
-        if (!handleData(config.params,false)) {
+        if (!handleParams(config.params)) {
             //如果参数为空字符串,空对象，或者没写 和 undefined进这里
-            xhl.open(config.method, config.baseUrl + config.url);//字符串拼凑
+            xhl.open(config.method, config.baseURL + config.url);//字符串拼凑
         } else {
             // 有参数进这里
-            xhl.open(config.method, `${config.baseUrl}${config.url}?${handleData(config.params,false)}`);
-        }
+            xhl.open(config.method, `${config.baseURL}${config.url}?${handleParams(config.params)}`);
+        };
         handleHeader(config.headers);//此方法用来遍历请求头
         // xhl.setRequestHeader('content-type', 'application/x-www-form-urlencoded');
         // xhl.setRequestHeader('content-type', 'application/json');
@@ -166,7 +215,7 @@ function xhlAdepter(config) {
         xhl.ontimeout = function () {
             console.error("请求超时了!!小牛🐎");
         };//超时结束
-        xhl.send(handleData(config.data,config.changeSendType));
+        xhl.send(handleData(config.data) || null);
         xhl.onreadystatechange = function () {
             if (xhl.readyState === 4) {
                 if (xhl.status >= 200 && xhl.status < 300) {
@@ -220,16 +269,20 @@ function CancelToken(executor) {
 };
 //创建默认配置对象
 const defaults = {
+    //配置器
     adapter: ['xhr'],
-    baseUrl: "",
+    baseURL: "",
+    data:{},
+    params:{},
     timeout: 0,
     headers: {
         'Accept': 'application/json, text/plain, */*',
-        'content-type': 'application/x-www-form-urlencoded',
+        // 'content-type': 'application/x-www-form-urlencoded',
         // 'content-type':"application/json"
     },
     responseType: "json",
-    changeSendType:false,
+    //自定义属性，用于改变请求头的类型
+    changeSendType: false,
 };
 //通过request发送请求
 Axios.prototype.request = function (configUrl, config) {
@@ -301,7 +354,7 @@ Axios.prototype.post = function (url, config) {
 };
 // 获取完整的url
 Axios.prototype.getUri = function (config) {
-    const url = config.baseUrl || this.default.baseUrl;
+    const url = config.baseURL || this.defaults.baseURL;
     return url + config.url;
 }
 // Axios.prototype.getUri = function(config){};
