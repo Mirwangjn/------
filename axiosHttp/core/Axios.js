@@ -23,8 +23,6 @@ const defaults = {
     //配置器
     adapter: ["xhr", "http"],
     baseURL: "",
-    data: {},
-    params: {},
     timeout: 0,
     //取消请求
     cancelToken: "",

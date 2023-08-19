@@ -1,15 +1,11 @@
-
 const { configMerge } = require("./utils");
-const InterceptorManager = require("./core/InterceptorManager");
-const Axios = require("./core/Axios")
+const Axios = require("./core/Axios");
 
 //创建默认配置对象
 const defaults = {
     //配置器
     adapter: ["xhr", "http"],
     baseURL: "",
-    data: {},
-    params: {},
     timeout: 0,
     //取消请求
     cancelToken: "",
