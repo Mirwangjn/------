@@ -6,7 +6,7 @@
 function CancelToken(executor) {
     let resolvePromise;
 
-    this.promise = new Promise((resolve, reject) => {
+    this.cancelTokenpromise = new Promise((resolve, reject) => {
         //将改变状态的使用权给到resolvePromise
         resolvePromise = resolve;
     });

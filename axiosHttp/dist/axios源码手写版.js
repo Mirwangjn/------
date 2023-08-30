@@ -312,10 +312,12 @@ Axios.prototype.request = function (configUrl, config) {
             defaultConfig.headers[key] = config.headers[key];
         };
         changeHeaders = defaultConfig.headers;
-        const configMergeResult = Object.assign(defaultConfig, config, changeHeaders);
-        // console.log(changeHeaders);
+        //Object.assign() 不会在源对象值为 null 或 undefined 时抛出错误。
+        // const configMergeResult = Object.assign(defaultConfig, config, {headers:changeHeaders});
+        const configMergeResult = Object.assign(defaultConfig, config);
         // return { ...defaultConfig, ...config, headers: changeHeaders }
-        return configMergeResult;
+      
+        return {...configMergeResult, headers:changeHeaders};
     };
     const merge = configMerge(defaults, config);
     // console.log(merge);

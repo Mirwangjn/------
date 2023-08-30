@@ -1,5 +1,6 @@
-const { configMerge } = require("./utils");
+const { configMerge ,extend } = require("./utils");
 const Axios = require("./core/Axios");
+
 
 //创建默认配置对象
 const defaults = {
@@ -27,11 +28,17 @@ const defaults = {
 
 };
 
-// Axios.prototype.getUri = function(config){};
 // defaultConfig为一些基本的配置
+/**
+ * 创建实例
+ * 
+ * @param {Object} defaultConfig 
+ * @returns {Axios}
+ */
 function createInstance(defaultConfig) {
-    const context = new Axios(defaultConfig);
+     const context = new Axios(defaultConfig);
     //让Axios.prototype.request的this指向实例对象context（保险）
+    
     const instance = Axios.prototype.request.bind(context);
     /*
         //将实例对象的方法和属性全部添加给instance
@@ -39,23 +46,30 @@ function createInstance(defaultConfig) {
         //相当于添加静态方法
         4.这一步只是把原型上的方法挂载到instance身上
     */
-    Object.keys(Axios.prototype).forEach(key => {
-        instance[key] = Axios.prototype[key].bind(context);
-    });
+    // Object.keys(Axios.prototype).forEach(key => {
+    //     instance[key] = Axios.prototype[key].bind(context);
+    // });
+    extend(instance,Axios.prototype,context,{allOwnKey: true});
     //获得实例的属性，方法是挂载到原型身上的，所以不会拿到
-    Object.keys(context).forEach(key => {
-        instance[key] = context[key]
-    })
+    // Object.keys(context).forEach(key => {
+    //     instance[key] = context[key];
+    // })
+    extend(instance,context,null,{allOwnKey: true});
     return instance;
+    
 };
-//赋值
+
+
 const axios = createInstance(defaults);//传入值为axios默认的配置对象
-// axios.request({method:"post"})
-//返回值为一个新的配置对象
-axios.create = function (config) {
+
+
+
+axios.create =  function (config) {
     const createConfig = configMerge(defaults, config);
     // console.log(createConfig);
-    return createInstance(createConfig)
-}
-//向外导出
-module.exports = axios;
+    return createInstance(createConfig);
+};
+axios.Axios = Axios;
+module.exports = {
+    axios
+};

@@ -1,6 +1,12 @@
 // const { configMerge } = require("../utils");
 const InterceptorManager = require("./InterceptorManager");
-const dispatchRequest = require("./dispatchRequest")
+const dispatchRequest = require("./dispatchRequest");
+const {configMerge, forEach} = require("../utils")
+/**
+ * @constructor
+ * @param {Object} instanceConfig 
+ * @returns {Axios}
+ */
 function Axios(instanceConfig) {
     this.defaults = instanceConfig;
     /*
@@ -41,10 +47,18 @@ const defaults = {
     application/json,是字符串或者URLSearchParams则发送application/x-www-form-urlencoded
     而这个属性就是帮你把对象类型发送application/x-www-form-urlencoded请求头。
     */
-
+    
 };
+ /**
+   * Dispatch a request
+   *
+   * @param {String|Object} configUrl The config specific for this request (merged with this.defaults)
+   * @param {?Object} config
+   *
+   * @returns {Promise} The Promise to be fulfilled
+   */
 Axios.prototype.request = function (configUrl, config) {
-    //axios在支持只写网址的
+    //axios支持只写网址的
     if (typeof configUrl === "string") {
         //如果没写则为空对象
         config = config || {};
@@ -58,21 +72,7 @@ Axios.prototype.request = function (configUrl, config) {
     //合并默认配置对象和用户所传递的参数，但缺陷是我的配置如果是空对象会直接覆盖我的默认配置对象
     // const merge = { ...defaults, ...config };
     //
-    function configMerge(defaultConfig, config) {
-        let changeHeaders;
-        //Object.keys获取null和undefined会报错
-        // Object.keys(config.headers).forEach((eleConfig,index) =>{
-        //     // headers请求头不可以覆盖，其他可以
-        //     defaultConfig.headers[eleConfig] = config.headers[eleConfig];
-        // });
-        // forin在获取null和undefined不会报错
-        for (const key in config.headers) {
-            defaultConfig.headers[key] = config.headers[key];
-        };
-        changeHeaders = defaultConfig.headers;
-        // console.log(changeHeaders);
-        return { ...defaultConfig, ...config, headers: changeHeaders }
-    };
+
     const merge = configMerge(defaults, config);
     // console.log(merge);
     //传入的参数在先，修改在后
@@ -99,21 +99,32 @@ Axios.prototype.request = function (configUrl, config) {
     return promise;
 };
 // get和post内部是调用了request请求
-Axios.prototype.get = function (url, config) {
-    config.method = "get";
-    config.url = url
-    const promise = this.request(config);
-    return promise;
-};
-Axios.prototype.post = function (url, config) {
-    config.method = "post";
-    config.url = url
-    const promise = this.request(config)
-    return promise;
-};
+// Axios.prototype.get = function (url, config = {}) {
+//     config.method = "get";
+//     config.url = url
+//     const promise = this.request(config);
+//     return promise;
+// };
+// Axios.prototype.post = function (url, config = {}) {
+//     config.method = "post";
+//     config.url = url
+//     const promise = this.request(config)
+//     return promise;
+// };
+forEach(["get","post","put","delete","putch","head","options"],(key) => {
+    Axios.prototype[key] = function(url, config = {}) {
+        config.method = key;
+        config.url = url
+        const promise = this.request(config)
+        return promise;
+    };
+});
 // 获取完整的url
 Axios.prototype.getUri = function (config) {
+    
     const url = config.baseURL || this.defaults.baseURL;
-    return url + config.url;
+    return (url + config.url) || undefined;
 };
+
+
 module.exports = Axios;

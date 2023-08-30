@@ -1,6 +1,6 @@
 const http = require("node:http");
 const https = require("node:https");
-const { handleData, handleHeader, handleParams, recognizeHttpType } = require("../utils");
+const { handleData, handleHeader, handleParams, recognizeHttpType ,forEach,handleObject, isURLSearchParams} = require("../utils");
 const { CancelToken } = require("../core/CancelToken");
 //由这个函数来发送请求
 function httpAdepter(config) {
@@ -78,12 +78,17 @@ function httpAdepter(config) {
                 //防止他人瞎乱改，把responseType设置为空字符串
                 config.responseType = config.responseType || "json";
                 //当以数组形式直接调用函数时，需注意上面地分号
-                ["text", "json"].forEach(key => {
+                // ["text", "json"].forEach(key => {
+                    // if (config.responseType === key) {
+                    //     str = handleType[key](str);//handleType.json(response)
+                    // }
+                // });
+                forEach(["text", "json"], (key) => {
                     if (config.responseType === key) {
                         str = handleType[key](str);//handleType.json(response)
+
                     }
                 });
-
                 //返回数据
                 resolve({
                     // 配置
@@ -95,7 +100,9 @@ function httpAdepter(config) {
                     //res.statusCode为响应状态码
                     status: res.statusCode,
                     //res.statusMessage为响应状态信息
-                    statustext: res.statusMessage
+                    statusText: res.statusMessage,
+                    //响应流
+                    // request: res,
                 });
 
             });
@@ -106,8 +113,8 @@ function httpAdepter(config) {
                     //res.statusCode为响应状态码
                     status: res.statusCode,
                     //res.statusMessage为响应状态信息
-                    statustext: res.statusMessage,
-                    message: err.message
+                    statusText: res.statusMessage,
+                    message: err.message,
                 })
             })
 
@@ -120,16 +127,21 @@ function httpAdepter(config) {
             console.error("请求出错" + err.message);
             // throw err;
         });
-
+        const sendMsg = handleData(config.data,(newV, oldV) => {
+            if(isURLSearchParams(oldV)) {config.data = newV; return newV};
+            return config.changeSendType ? handleObject(oldV) : newV;
+        })
         //如同xhl的send()
-        httpResponse.write(handleData(config.data, config));
+        // httpResponse.write(handleData(config.data, config));
+        // 参数为string类型不能是undefinied
+        httpResponse.write(sendMsg);
 
         //发送请求
         httpResponse.end();
 
         //取消请求条件
         if (config.cancelToken instanceof CancelToken) {
-            config.cancelToken.promise.then(res => {
+            config.cancelToken.cancelTokenpromise.then(res => {
                 //    取消请求 
                 httpResponse.abort();
             })
