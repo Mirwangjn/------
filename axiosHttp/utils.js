@@ -1,6 +1,4 @@
 
-
-
 const typeOfTest = type => thing => typeof thing === type;
 //cache的作用是作为存储，避免过多的重复执行
 const kindOf = (cache => thing => {
@@ -68,7 +66,7 @@ function handleHeader(headers, config) {
         // config.data instanceof URLSearchParams || typeof config.data === "string" ? 
         // headers["content-type"] = "application/x-www-form-urlencoded" : config.data instanceof Object ? headers["content-type"] = "application/json" : "";
         //通过changeSendType配置项改变对象的请求头
-       
+
     }
     //返回通过识别值类型后而改变的headers
     return headers;
@@ -77,28 +75,28 @@ function handleHeader(headers, config) {
 function handleObject(changeToString) {
     let num = 1;
     let str = "";
-    forEach(changeToString, (key,val) => {
+    forEach(changeToString, (key, val) => {
         if (num === 1) {
-                str += `${key}=${val}`;
-                num++;
-            } else {
-                str += `&${key}=${val}`;
-            }
+            str += `${key}=${val}`;
+            num++;
+        } else {
+            str += `&${key}=${val}`;
+        }
     });
-    
+
     return str;
 };
 //如果是urSearchParams则转换为字符串。是对象根据配置则还需要根据changeSendType配置来进一步判断
 //字符串则直接转交
-function handleData(change, fn) { 
-    
+function handleData(change, fn) {
+
     let data = "";
     //最后应该写"" 因为change为null或undefinied时会有问题
     data = isURLSearchParams(change) ? change.toString() : isString(change)
-     ? change : isObject(change) ? JSON.stringify(change) : "";
-     
+        ? change : isObject(change) ? JSON.stringify(change) : "";
+
     //回调函数中的参数为经过类型判断而改变后的值，然后把这个值交出去
-   return  fn && fn(data,change);
+    return fn && fn(data, change);
 
 }
 //处理params配置 {id:1} => id:1
@@ -144,8 +142,8 @@ function configMerge(defaultConfig, config) {
     let changeHeaders;
     //Object.keys获取null和undefined会报错
     // forin在获取null和undefined不会报错
-    forEach(config.headers,(key,val) => {
-        if(Object.hasOwn(config.headers, key)) {
+    forEach(config.headers, (key, val) => {
+        if (Object.hasOwn(config.headers, key)) {
             // defaultConfig.headers[key] = config.headers[key];
             defaultConfig.headers[key] = val;
         }
@@ -157,7 +155,7 @@ function configMerge(defaultConfig, config) {
     const configMergeResult = Object.assign(defaultConfig, config, {headers:changeHeaders}); --->另一种写法，但是在阅读性上有点不行
     */
     const configMergeResult = Object.assign(defaultConfig, config);
-   
+
     return { ...configMergeResult, headers: changeHeaders };
 };
 //深度检测
@@ -227,10 +225,10 @@ function kindKey(obj, key) {
     return null;
 };
 //金牌打手，猎物，雇主
-function extend(target,hunted,thisArg,{allOwnKey} = {}) {
-    forEach(hunted, (key,val) => {
+function extend(target, hunted, thisArg, { allOwnKey } = {}) {
+    forEach(hunted, (key, val) => {
 
-        if(thisArg && isFunction(val)) {
+        if (thisArg && isFunction(val)) {
 
             target[key] = val.bind(thisArg);
 
@@ -239,7 +237,7 @@ function extend(target,hunted,thisArg,{allOwnKey} = {}) {
             target[key] = val;
         }
 
-    },{allOwnKey});
+    }, { allOwnKey });
 };
 
 module.exports = {

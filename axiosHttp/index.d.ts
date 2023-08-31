@@ -1,5 +1,4 @@
 
-// //声明Methods类型
 export type Methods = "get" | "post" | "delete" | "putch" | "put" | "head" | "options";
 
 export type AxiosHeaderValue = string | string[] | number | boolean | null;
@@ -12,7 +11,9 @@ export type ContentType = 'text/html' | 'text/plain' | 'multipart/form-data' | '
 
 export type CommonResponseHeadersList = 'Server' | 'Content-Type' | 'Content-Length' | 'Cache-Control' | 'Content-Encoding';
 
-export type AxiosAdapterName = 'xhr' | 'http' | string;
+// export type AxiosAdapterName = 'xhr' | 'http' | string;
+
+export type AxiosAdapterName = 'xhr' | 'http';
 
 export type AxiosRequestHeaders = {
     [key in CommonRequestHeadersList]?: AxiosHeaderValue
@@ -20,15 +21,15 @@ export type AxiosRequestHeaders = {
     "Content-type": ContentType
 };
 
-type RawCommonResponseHeaders = {
+export type RawCommonResponseHeaders = {
     [key in CommonResponseHeadersList]?: AxiosHeaderValue
 } & {
     "set-cookie": string[];
 }
 //创建Axios中的defaults的接口
 
-declare export class CancelToken<R> {
-    constructor(executor);
+declare export class CancelToken<R = any> {
+    constructor(executor: () => void);
     cancelTokenpromise: Promise<R>
 };
 //声明文件中的泛型在其他地方使用时需要带上
@@ -41,35 +42,35 @@ interface AxiosRequestConfig<D = any> {
     //如果params通过识别为object的话，则params也必须是object就不好
     params?: any,
     headers?: AxiosRequestHeaders,
-    responseType: ResponseType,
-    changeSendType: boolean,
-    timeout: number,
-    cancelToken: CancelToken | null
+    responseType?: ResponseType,
+    changeSendType?: boolean,
+    timeout?: number,
+    cancelToken?: CancelToken | null
 };
 // AxiosDefaults<T>可以不要
-interface AxiosDefaults<T = any> extends AxiosRequestConfig { };
-//泛型如果提前声明了类型，后面再使用的时候可以不加<>,而是直接写就ok
-interface AxiosResponse<T = any> {
+interface AxiosDefaults extends AxiosRequestConfig { };
+//泛型如果提前声明了类型，后面再使用的时候可以不加<>(如果需要将值覆盖的话还是需要写的),而是直接写就ok
+interface AxiosResponse<T = any, D = any> {
     data: T,
     headers: RawCommonResponseHeaders,
-    config: AxiosRequestConfig<T>
+    config: AxiosRequestConfig<D>,
     status: number,
     statusText: string,
     request?: any,
 };
 //泛型会进行类型推断，如果value为object则其他的也是
 declare class AxiosInterceptorManager<V> {
-    handlers: Function[];
+    handlers: ((config: AxiosRequestConfig) => AxiosRequestConfig)[];
     constructor();
-    use(fulfilled?: ((value: V) => V | Promise<V>) | null, rejected?: ((error: any) => any) | null);
+    use(fulfilled?: ((value: V) => V | Promise<V>) | null, rejected?: ((error: any) => any) | null): void;
 };
 
 declare class Axios {
     constructor(config?: AxiosRequestConfig);
     defaults: AxiosDefaults;
     interceptors: {
-        request: AxiosInterceptorManager<V>,//v暂时没有值，后续再添加
-        response: AxiosInterceptorManager<V>,
+        request: AxiosInterceptorManager<AxiosRequestConfig>,
+        response: AxiosInterceptorManager<AxiosResponse>,
     };
     //     request<T = any, R = AxiosResponse<T>, D = any>(config: AxiosRequestConfig<D>): Promise<R>;
     //   get<T = any, R = AxiosResponse<T>, D = any>(url: string, config?: AxiosRequestConfig<D>): Promise<R>;
@@ -84,12 +85,12 @@ declare class Axios {
     options<T = any, R = AxiosResponse<T>, D = any>(url: string, config?: AxiosRequestConfig<D>): Promise<R>;
 
 }
-// declare function forEach<T extends {length: number}>(ele: T,fn:(key: any,val: any) => void,obj?: {allOwnKey:boolean})
-// declare export function axios(config: AxiosRequestConfig): Promise<any>
-type axiosValue = {
+
+export type axiosValue = {
     (config: AxiosRequestConfig): Promise<AxiosResponse>,
     create: (config: AxiosRequestConfig) => AxiosRequestConfig
 }
-type axiosStatic = axiosValue & Axios
+export type axiosStatic = axiosValue & Axios;
 
-declare const axios: axiosStatic
+
+declare const axios: axiosStatic;
