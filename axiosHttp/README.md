@@ -36,7 +36,7 @@
     //设置超时时间
     timeout: 0,
     //取消请求
-    cancelToken: undefined,
+    cancelToken: null,
     // 设置请求头
     headers: {
         'Accept': 'application/json, text/plain, */*',

@@ -26,9 +26,12 @@ function httpAdepter(config) {
             //请求方式
             method: config.method || "get",
             //配置请求头 =>根据值类型来判断发送什么请求头
-            headers: handleHeader(config.headers, config)
+            headers: handleHeader(config.headers, config),
+            //配置代理
+            agent: config[recognizeHttpType(url.protocol) + "Agent"] || protocol.globalAgent
+            
         };
-
+        console.log(options.agent);
         //res与服务器的res功能差不多
         const httpResponse = protocol.request(options, res => {
             //数据汇总
@@ -124,6 +127,7 @@ function httpAdepter(config) {
         httpResponse.on("close", () => { console.warn("请求超时了小🐂🐎或者成功了！你猜是哪个。") });
 
         httpResponse.on("error", (err) => {
+            
             console.error("请求出错" + err.message);
             // throw err;
         });

@@ -111,10 +111,20 @@ Axios.prototype.request = function (configUrl, config) {
 //     const promise = this.request(config)
 //     return promise;
 // };
-forEach(["get","post","put","delete","putch","head","options"],(key) => {
+forEach(["get","delete","head","options"],(key) => {
     Axios.prototype[key] = function(url, config = {}) {
         config.method = key;
         config.url = url
+        const promise = this.request(config)
+        return promise;
+    };
+});
+
+forEach(["post","put","putch"], (key) => {
+    Axios.prototype[key] = function(url, data,config = {}) {
+        config.method = key;
+        config.url = url;
+        config.data = data;
         const promise = this.request(config)
         return promise;
     };

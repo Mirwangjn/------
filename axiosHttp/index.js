@@ -25,7 +25,9 @@ const defaults = {
     application/json,是字符串或者URLSearchParams则发送application/x-www-form-urlencoded
     而这个属性就是帮你把对象类型发送application/x-www-form-urlencoded请求头。
     */
-
+    //配置代理
+    httpAgent: undefined,
+    httpsAgent: undefined
 };
 
 // defaultConfig为一些基本的配置
